@@ -214,6 +214,7 @@ _import_structure = {
     "models.fnet": ["FNET_PRETRAINED_CONFIG_ARCHIVE_MAP", "FNetConfig"],
     "models.fsmt": ["FSMT_PRETRAINED_CONFIG_ARCHIVE_MAP", "FSMTConfig", "FSMTTokenizer"],
     "models.funnel": ["FUNNEL_PRETRAINED_CONFIG_ARCHIVE_MAP", "FunnelConfig", "FunnelTokenizer"],
+    "models.glm_130b": ["GLM_130B_PRETRAINED_CONFIG_ARCHIVE_MAP", "GLM130BConfig", "GLM130BTokenizer"],
     "models.glpn": ["GLPN_PRETRAINED_CONFIG_ARCHIVE_MAP", "GLPNConfig"],
     "models.gpt2": ["GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP", "GPT2Config", "GPT2Tokenizer"],
     "models.gpt_neo": ["GPT_NEO_PRETRAINED_CONFIG_ARCHIVE_MAP", "GPTNeoConfig"],
@@ -1200,6 +1201,13 @@ else:
             "FunnelModel",
             "FunnelPreTrainedModel",
             "load_tf_weights_in_funnel",
+        ]
+    )
+    _import_structure["models.glm_130b"].extend(
+        [
+            "GLM_130B_PRETRAINED_MODEL_ARCHIVE_LIST",
+            "GLM130BModel",
+            "GLM130BPreTrainedModel",
         ]
     )
     _import_structure["models.glpn"].extend(

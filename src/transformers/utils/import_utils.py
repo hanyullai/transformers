@@ -882,6 +882,12 @@ CCL_IMPORT_ERROR = """
 `pip install oneccl_bind_pt -f https://developer.intel.com/ipex-whl-stable`
 """
 
+# docstyle-ignore
+APEX_IMPORT_ERROR = """
+{0} requires the apex library but it was not found in your environment. You can install it with pip as
+explained here: https://github.com/NVIDIA/apex.
+"""
+
 BACKENDS_MAPPING = OrderedDict(
     [
         ("datasets", (is_datasets_available, DATASETS_IMPORT_ERROR)),
@@ -910,6 +916,7 @@ BACKENDS_MAPPING = OrderedDict(
         ("scipy", (is_scipy_available, SCIPY_IMPORT_ERROR)),
         ("accelerate", (is_accelerate_available, ACCELERATE_IMPORT_ERROR)),
         ("oneccl_bind_pt", (is_ccl_available, CCL_IMPORT_ERROR)),
+        ("apex", (is_apex_available, APEX_IMPORT_ERROR)),
     ]
 )
 

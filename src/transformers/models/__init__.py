@@ -62,6 +62,7 @@ from . import (
     fnet,
     fsmt,
     funnel,
+    glm_130b,
     glpn,
     gpt2,
     gpt_neo,

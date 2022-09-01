@@ -125,6 +125,7 @@ else:
             ("fnet", ("FNetTokenizer", "FNetTokenizerFast" if is_tokenizers_available() else None)),
             ("fsmt", ("FSMTTokenizer", None)),
             ("funnel", ("FunnelTokenizer", "FunnelTokenizerFast" if is_tokenizers_available() else None)),
+            ("glm_130b", ("GLM130BTokenizer", None)),
             ("gpt2", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
             ("gpt_neo", ("GPT2Tokenizer", "GPT2TokenizerFast" if is_tokenizers_available() else None)),
             ("gpt_neox", (None, "GPTNeoXTokenizerFast" if is_tokenizers_available() else None)),
