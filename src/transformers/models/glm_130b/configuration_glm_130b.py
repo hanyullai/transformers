@@ -90,15 +90,18 @@ class GLM130BConfig(PretrainedConfig):
     }
 
     def __init__(
-            self,
-            num_layers=70,
-            vocab_size=150528,
-            hidden_size=12288,
-            num_attention_heads=96,
-            max_sequence_length=2048,
-            layernorm_epsilon=1.0e-5,
-            inner_hidden_size=32768,
-            **kwargs
+        self,
+        vocab_size=150528,
+        hidden_size=12288,
+        num_layers=70,
+        num_attention_heads=96,
+        layernorm_epsilon=1e-5,
+        use_cache=False,
+        bos_token_id=150004,
+        eos_token_id=150005,
+        max_sequence_length=2048,
+        inner_hidden_size=32768,
+        **kwargs
     ):
         self.num_layers = num_layers
         self.vocab_size = vocab_size
@@ -107,5 +110,8 @@ class GLM130BConfig(PretrainedConfig):
         self.max_sequence_length = max_sequence_length
         self.layernorm_epsilon = layernorm_epsilon
         self.inner_hidden_size = inner_hidden_size
-        super().__init__(**kwargs)
+        self.use_cache = use_cache
+        self.bos_token_id = bos_token_id
+        self.eos_token_id = eos_token_id
+        super().__init__(bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 

@@ -17,14 +17,14 @@ class _IceTokenizer(AbstractTokenizer):
         try:
             from ..icetk import icetk
 
-            self.tokenizer = icetk
+            self.tokenizer = icetk.text_tokenizer
         except ImportError:
             pass
         self.num_tokens = 150000
-        self.add_special_tokens(['[MASK]', '[gMASK]', '[sMASK]', '[eod]', '[sop]', '[eop]', '[ENC]', '[dBLOCK]'])
+        self.add_special_tokens(['[MASK]', '[gMASK]', '[sMASK]', 'eod', 'sop', 'eop', 'ENC', 'dBLOCK'])
         self.sentence_end_decoder = {20007: '.', 20031: '？', 20035: '！', 20027: '；', 20012: ':', 83823: '。', 145670: '…'}
 
-        self.special_tokens['[eos]'] = 20002
+        self.special_tokens['eos'] = 20002
         self.special_tokens_decoder[20002] = '</s>'
 
     def add_special_tokens(self, special_tokens):
@@ -54,7 +54,7 @@ class _IceTokenizer(AbstractTokenizer):
         elif idx in self.special_tokens_decoder:
             return self.special_tokens_decoder[idx]
         else:
-            return self.tokenizer.decode([idx])
+            return self.tokenizer.convert_id_to_token(idx - 20000)
 
     def TokenToId(self, token):
         if token == '[pad]':
@@ -62,7 +62,7 @@ class _IceTokenizer(AbstractTokenizer):
         elif token in self.special_tokens:
             return self.special_tokens[token]
         else:
-            return self.tokenizer.encode(token)[0]
+            return self.tokenizer.convert_token_to_id(token) + 20000
 
     @property
     def vocab_size(self):
@@ -77,11 +77,22 @@ class _IceTokenizer(AbstractTokenizer):
         return self.tokenizer.decoder
 
     def tokenize(self, text):
-        return self.tokenizer.encode(text)
+        return self.tokenizer.tokenize(text)
 
-    def detokenize(self, token_ids):
-        return " ".join([self.IdToToken(t) for t in token_ids])
+    def decode(self, token_ids):
+        split = [-1]
+        for i, token in enumerate(token_ids):
+            if token in self.special_tokens_decoder:
+                split.append(i)
+        split.append(len(token_ids))
+        text = ""
+        for i in range(len(split) - 1):
+            if i > 0:
+                text += " " + self.IdToToken(token_ids[split[i]]) + " "
+            ids = [int(_id) - 20000 for _id in token_ids[split[i] + 1: split[i + 1]]]
+            text += self.tokenizer.decode(ids).replace('<n>', '\n')
+        return text
 
     @property
     def eod(self):
-        return self.get_special_token('[eod]')
+        return self.get_special_token('eod')

@@ -50,6 +50,7 @@ else:
     _import_structure["modeling_glm_130b"] = [
         "GLM_130B_PRETRAINED_MODEL_ARCHIVE_LIST",
         "GLM130BModel",
+        "GLM130BForConditionalGeneration",
         "GLM130BPreTrainedModel"
     ]
 
@@ -67,6 +68,7 @@ if TYPE_CHECKING:
         from .modeling_glm_130b import (
             GLM_130B_PRETRAINED_MODEL_ARCHIVE_LIST,
             GLM130BModel,
+            GLM130BForConditionalGeneration,
             GLM130BPreTrainedModel,
         )
 

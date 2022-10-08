@@ -1208,6 +1208,7 @@ else:
             "GLM_130B_PRETRAINED_MODEL_ARCHIVE_LIST",
             "GLM130BModel",
             "GLM130BPreTrainedModel",
+            "GLM130BForConditionalGeneration",
         ]
     )
     _import_structure["models.glpn"].extend(
@@ -3033,6 +3034,7 @@ if TYPE_CHECKING:
     from .models.fnet import FNET_PRETRAINED_CONFIG_ARCHIVE_MAP, FNetConfig
     from .models.fsmt import FSMT_PRETRAINED_CONFIG_ARCHIVE_MAP, FSMTConfig, FSMTTokenizer
     from .models.funnel import FUNNEL_PRETRAINED_CONFIG_ARCHIVE_MAP, FunnelConfig, FunnelTokenizer
+    from .models.glm_130b import GLM_130B_PRETRAINED_CONFIG_ARCHIVE_MAP, GLM130BConfig, GLM130BTokenizer
     from .models.glpn import GLPN_PRETRAINED_CONFIG_ARCHIVE_MAP, GLPNConfig
     from .models.gpt2 import GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP, GPT2Config, GPT2Tokenizer
     from .models.gpt_neo import GPT_NEO_PRETRAINED_CONFIG_ARCHIVE_MAP, GPTNeoConfig
@@ -3874,6 +3876,11 @@ if TYPE_CHECKING:
             GLPNForDepthEstimation,
             GLPNModel,
             GLPNPreTrainedModel,
+        )
+        from .models.glm_130b import (
+            GLM130BModel,
+            GLM130BPreTrainedModel,
+            GLM130BForConditionalGeneration
         )
         from .models.gpt2 import (
             GPT2_PRETRAINED_MODEL_ARCHIVE_LIST,

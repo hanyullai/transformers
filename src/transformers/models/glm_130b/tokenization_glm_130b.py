@@ -61,8 +61,8 @@ class GLM130BTokenizer(PreTrainedTokenizer):
             vocab_file='test',
             do_lower_case=True,
             max_len=None,
-            bos_token='[sop]',
-            eos_token='[eos]',
+            bos_token='sop',
+            eos_token='eos',
             pad_token='[pad]',
             mask_token='[MASK]',
             gMASK_token='[gMASK]',
@@ -88,21 +88,33 @@ class GLM130BTokenizer(PreTrainedTokenizer):
         return self.icetokenizer.vocab
 
     def _tokenize(self, text):
+        # add MASK
+        generation_mask = "[MASK]" if "[MASK]" in text else "[gMASK]"
+
         mask_pattern = r"\[g?MASK\]"
         text_list = re.split(mask_pattern, text)
         pattern_list = re.compile(mask_pattern).findall(text)
-        split_ids = []
-        split_tokens = []
+        seq = []
         for i in range(len(pattern_list)):
             pattern = pattern_list[i]
             sub_text = text_list[i]
-            split_ids.extend(self.icetokenizer.tokenize(sub_text))
-            split_ids.append(self.icetokenizer.get_command(pattern))
+            seq.extend(self.icetokenizer.tokenize(sub_text))
+            seq.append(pattern)
 
-        split_ids.extend(self.icetokenizer.tokenize(text_list[-1]))
-        split_tokens = [self.icetokenizer.IdToToken(idx) for idx in split_ids]
 
-        return split_tokens
+        seq.extend(self.icetokenizer.tokenize(text_list[-1]))
+        
+        return seq
+    
+    def _decode(
+        self,
+        token_ids: List[int],
+        skip_special_tokens: bool = False,
+        clean_up_tokenization_spaces: bool = True,
+        spaces_between_special_tokens: bool = True,
+        **kwargs
+    ) -> str:
+        return self.icetokenizer.decode(token_ids)
 
     def _convert_token_to_id(self, token):
         """Converts a token (str) in an id using the vocab."""
@@ -140,6 +152,8 @@ class GLM130BTokenizer(PreTrainedTokenizer):
 
         if token_ids_0[-1] != mask_ids and token_ids_0[-1] != gmask_ids:
             token_ids_0 += [self.icetokenizer.get_command(self.eos_token)]
+
+        token_ids_0 += [self.icetokenizer.get_command(self.bos_token)]
 
         return token_ids_0
 
