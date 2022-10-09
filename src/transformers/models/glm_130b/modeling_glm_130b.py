@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from typing import Optional, Tuple, Union
 
 from .position_embedding import RotaryEmbedding, apply_rotary_pos_emb_index
+from torch.nn import CrossEntropyLoss
 
 from ...utils import (
     requires_backends,
@@ -43,36 +44,17 @@ def attention_fn(
     ):
         if layer_past is not None:
             past_key, past_value = layer_past
-            # concatenate along seq_length dimension:
-            #  - key: [batch_size * self.num_heads, head_dim, kv_length]
-            #  - value: [batch_size * self.num_heads, kv_length, head_dim]
             key_layer = torch.cat((past_key, key_layer), dim=0)
             value_layer = torch.cat((past_value, value_layer), dim=0)
         
         # seqlen, batch, num_attention_heads, hidden_size_per_attention_head
         seq_len, b, nh, hidden_size = key_layer.shape
 
-        # b, seqlen, stack, head, hidden
-        # cache_kv = (
-        #     torch.stack((key_layer, value_layer))
-        #     .permute(2, 1, 0, 3, 4)
-        #     .detach()
-        #     .contiguous()
-        #     .view(b, seq_len, nh * hidden_size * 2)
-        # )
 
         if use_cache:
             present = (key_layer, value_layer)
         else:
             present = None
-
-        # if mem is not None:  # the first time, mem is None
-        #     # might change batch_size
-        #     # b, seqlen, stack, head, hidden -> stack, seqlen, b, head, hidden
-        #     mem = mem.expand(b, -1, -1).reshape(b, mem.shape[1], 2, nh, hidden_size).permute(2, 1, 0, 3, 4)
-        #     memk, memv = mem[0], mem[1]
-        #     key_layer = torch.cat((memk, key_layer), dim=0)
-        #     value_layer = torch.cat((memv, value_layer), dim=0)
 
         query_key_layer_scaling_coeff = float(layer_id + 1)
         if scaling_attention_score:
@@ -730,18 +712,18 @@ class GLM130BForConditionalGeneration(GLM130BPreTrainedModel):
         lm_logits = self.lm_head(hidden_states).permute(1, 0, 2).contiguous()
 
         loss = None
-        # if labels is not None:
-        #     lm_logits = lm_logits.to(torch.float32)
+        if labels is not None:
+            lm_logits = lm_logits.to(torch.float32)
 
-        #     # Shift so that tokens < n predict n
-        #     shift_logits = lm_logits[..., :-1, :].contiguous()
-        #     shift_labels = labels[..., 1:].contiguous()
-        #     # Flatten the tokens
-        #     loss_fct = CrossEntropyLoss()
-        #     loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+            # Shift so that tokens < n predict n
+            shift_logits = lm_logits[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+            # Flatten the tokens
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
 
-        #     lm_logits = lm_logits.to(hidden_states.dtype)
-        #     loss = loss.to(hidden_states.dtype)
+            lm_logits = lm_logits.to(hidden_states.dtype)
+            loss = loss.to(hidden_states.dtype)
 
         if not return_dict:
             output = (lm_logits,) + transformer_outputs[1:]
@@ -754,3 +736,30 @@ class GLM130BForConditionalGeneration(GLM130BPreTrainedModel):
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
         )
+
+    @torch.no_grad()
+    def generate(
+        self,
+        **model_kwargs,
+    ):
+        MASK, gMASK = 150000, 150001
+        bos, eos = 150004, 150005
+
+        while True:
+            output_ids = super().generate(**model_kwargs)
+            
+            output_seq = output_ids[0].tolist()
+            mask_token = MASK if MASK in output_seq else gMASK
+            mask_position = output_seq.index(mask_token)
+            bos_position = output_seq.index(bos)
+            eos_position = output_seq.index(eos)
+
+            return_seq = output_seq[:mask_position] + output_seq[bos_position+1:eos_position] + output_seq[mask_position+1:bos_position]
+
+            if mask_token in return_seq: 
+                model_kwargs['input_ids'] = torch.LongTensor([return_seq + [bos]]).to(model_kwargs['input_ids'].device)
+            else:
+                break
+            
+        return torch.LongTensor([return_seq]).to(model_kwargs['input_ids'].device)
+

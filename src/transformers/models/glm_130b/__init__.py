@@ -21,8 +21,10 @@ from typing import TYPE_CHECKING
 from ...utils import (
     _LazyModule,
     OptionalDependencyNotAvailable,
+    is_sentencepiece_available,
     is_torch_available,
-    is_tokenizers_available)
+    is_tokenizers_available
+)
 
 
 _import_structure = {
@@ -33,7 +35,7 @@ _import_structure = {
 }
 
 try:
-    if not is_tokenizers_available():
+    if not is_sentencepiece_available():
         raise OptionalDependencyNotAvailable()
 except OptionalDependencyNotAvailable:
     pass
@@ -57,7 +59,14 @@ else:
 
 if TYPE_CHECKING:
     from .configuration_glm_130b import GLM_130B_PRETRAINED_CONFIG_ARCHIVE_MAP, GLM130BConfig
-    from .tokenization_glm_130b import GLM130BTokenizer
+
+    try:
+        if not is_sentencepiece_available():
+            raise OptionalDependencyNotAvailable()
+    except OptionalDependencyNotAvailable:
+        pass
+    else:
+        from .tokenization_glm_130b import GLM130BTokenizer
 
     try:
         if not is_torch_available():

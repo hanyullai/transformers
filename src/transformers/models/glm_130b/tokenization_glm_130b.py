@@ -28,12 +28,12 @@ from functools import lru_cache
 logger = logging.get_logger(__name__)
 
 VOCAB_FILES_NAMES = {
-    "vocab_file": "ice_text.model"
+    "vocab_file": "spiece.model"
 }
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "THUDM/GLM-130B": "https://huggingface.co/shunxing1234/GLM/resolve/main/vocab.txt",
+        "THUDM/GLM-130B": "https://huggingface.co/albert-base-v1/resolve/main/spiece.model",
     }
 }
 
@@ -57,26 +57,41 @@ class GLM130BTokenizer(PreTrainedTokenizer):
     model_input_names = ["input_ids"]
 
     def __init__(
-            self,
-            vocab_file='test',
-            do_lower_case=True,
-            max_len=None,
-            bos_token='sop',
-            eos_token='eos',
-            pad_token='[pad]',
-            mask_token='[MASK]',
-            gMASK_token='[gMASK]',
+        self,
+        vocab_file,
+        do_lower_case=False,
+        remove_space=False,
+        bos_token='sop',
+        eos_token='eos',
+        unk_token="<unk>",
+        pad_token='[pad]',
+        mask_token='[MASK]',
+        gMASK_token='[gMASK]',
+        **kwargs
+    ) -> None:
+        super().__init__(
+            do_lower_case=do_lower_case,
+            remove_space=remove_space,
+            bos_token=bos_token, 
+            eos_token=eos_token,
+            unk_token=unk_token,
+            pad_token=pad_token, 
+            mask_token=mask_token,
+            gMASK_token=gMASK_token,
             **kwargs
-    ):
-        super().__init__(bos_token=bos_token, eos_token=eos_token, max_len=max_len,
-                         pad_token=pad_token, mask_token=mask_token,
-                         gMASK_token=gMASK_token, **kwargs)
+        )
+
+        self.do_lower_case = do_lower_case
+        self.remove_space = remove_space
+        self.vocab_file = vocab_file
 
         self.bos_token = bos_token
         self.eos_token = eos_token
+        self.unk_token = unk_token
         self.pad_token = pad_token
         self.mask_token = mask_token
         self.gMASK_token = gMASK_token
+
         self.icetokenizer = _IceTokenizer()
 
 
@@ -87,7 +102,19 @@ class GLM130BTokenizer(PreTrainedTokenizer):
     def get_vocab(self):
         return self.icetokenizer.vocab
 
+    def preprocess_text(self, inputs):
+        if self.remove_space:
+            outputs = " ".join(inputs.strip().split())
+        else:
+            outputs = inputs
+
+        if self.do_lower_case:
+            outputs = outputs.lower()
+
+        return outputs
+
     def _tokenize(self, text):
+        text = self.preprocess_text(text)
         # add MASK
         generation_mask = "[MASK]" if "[MASK]" in text else "[gMASK]"
 
@@ -106,7 +133,7 @@ class GLM130BTokenizer(PreTrainedTokenizer):
         
         return seq
     
-    def _decode(
+    def decode(
         self,
         token_ids: List[int],
         skip_special_tokens: bool = False,

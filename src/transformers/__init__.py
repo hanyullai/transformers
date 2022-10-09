@@ -214,7 +214,7 @@ _import_structure = {
     "models.fnet": ["FNET_PRETRAINED_CONFIG_ARCHIVE_MAP", "FNetConfig"],
     "models.fsmt": ["FSMT_PRETRAINED_CONFIG_ARCHIVE_MAP", "FSMTConfig", "FSMTTokenizer"],
     "models.funnel": ["FUNNEL_PRETRAINED_CONFIG_ARCHIVE_MAP", "FunnelConfig", "FunnelTokenizer"],
-    "models.glm_130b": ["GLM_130B_PRETRAINED_CONFIG_ARCHIVE_MAP", "GLM130BConfig", "GLM130BTokenizer"],
+    "models.glm_130b": ["GLM_130B_PRETRAINED_CONFIG_ARCHIVE_MAP", "GLM130BConfig"],
     "models.glpn": ["GLPN_PRETRAINED_CONFIG_ARCHIVE_MAP", "GLPNConfig"],
     "models.gpt2": ["GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP", "GPT2Config", "GPT2Tokenizer"],
     "models.gpt_neo": ["GPT_NEO_PRETRAINED_CONFIG_ARCHIVE_MAP", "GPTNeoConfig"],
@@ -487,6 +487,7 @@ else:
     _import_structure["models.cpm"].append("CpmTokenizer")
     _import_structure["models.deberta_v2"].append("DebertaV2Tokenizer")
     _import_structure["models.fnet"].append("FNetTokenizer")
+    _import_structure["models.glm_130b"].append("GLM130BTokenizer")
     _import_structure["models.layoutxlm"].append("LayoutXLMTokenizer")
     _import_structure["models.m2m_100"].append("M2M100Tokenizer")
     _import_structure["models.marian"].append("MarianTokenizer")
@@ -3034,7 +3035,7 @@ if TYPE_CHECKING:
     from .models.fnet import FNET_PRETRAINED_CONFIG_ARCHIVE_MAP, FNetConfig
     from .models.fsmt import FSMT_PRETRAINED_CONFIG_ARCHIVE_MAP, FSMTConfig, FSMTTokenizer
     from .models.funnel import FUNNEL_PRETRAINED_CONFIG_ARCHIVE_MAP, FunnelConfig, FunnelTokenizer
-    from .models.glm_130b import GLM_130B_PRETRAINED_CONFIG_ARCHIVE_MAP, GLM130BConfig, GLM130BTokenizer
+    from .models.glm_130b import GLM_130B_PRETRAINED_CONFIG_ARCHIVE_MAP, GLM130BConfig
     from .models.glpn import GLPN_PRETRAINED_CONFIG_ARCHIVE_MAP, GLPNConfig
     from .models.gpt2 import GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP, GPT2Config, GPT2Tokenizer
     from .models.gpt_neo import GPT_NEO_PRETRAINED_CONFIG_ARCHIVE_MAP, GPTNeoConfig
@@ -3280,6 +3281,7 @@ if TYPE_CHECKING:
         from .models.cpm import CpmTokenizer
         from .models.deberta_v2 import DebertaV2Tokenizer
         from .models.fnet import FNetTokenizer
+        from .models.glm_130b import GLM130BTokenizer
         from .models.layoutxlm import LayoutXLMTokenizer
         from .models.m2m_100 import M2M100Tokenizer
         from .models.marian import MarianTokenizer
@@ -3878,6 +3880,7 @@ if TYPE_CHECKING:
             GLPNPreTrainedModel,
         )
         from .models.glm_130b import (
+            GLM_130B_PRETRAINED_MODEL_ARCHIVE_LIST,
             GLM130BModel,
             GLM130BPreTrainedModel,
             GLM130BForConditionalGeneration
