@@ -1,25 +1,19 @@
 from abc import ABC
 from abc import abstractmethod
-from .tokenizer import AbstractTokenizer
 import logging
+from .text_tokenizer import TextTokenizer
 
 logger = logging.getLogger(__name__)
 
 
-class _IceTokenizer(AbstractTokenizer):
+class _IceTokenizer():
     """Hardcoded tokenizer."""
 
-    def __init__(self):
+    def __init__(self, path):
         name = "IceTokenizer"
-        super().__init__(name)
 
-        self.tokenizer = None
-        try:
-            from ..icetk import icetk
-
-            self.tokenizer = icetk.text_tokenizer
-        except ImportError:
-            pass
+        self.tokenizer = TextTokenizer(path)
+        
         self.num_tokens = 150000
         self.add_special_tokens(['[MASK]', '[gMASK]', '[sMASK]', 'eod', 'sop', 'eop', 'ENC', 'dBLOCK'])
         self.sentence_end_decoder = {20007: '.', 20031: '？', 20035: '！', 20027: '；', 20012: ':', 83823: '。', 145670: '…'}

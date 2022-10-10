@@ -1,24 +1,17 @@
 # -*- encoding: utf-8 -*-
-'''
-@File    :   text_tokenizer.py
-@Time    :   2021/12/20 01:26:12
-@Author  :   Ming Ding 
-@Contact :   dm18@mails.tsinghua.edu.cn
-'''
 
-# here put the import lib
 import os
 import sys
 import math
 import random
-from copy import copy
-from typing import List
+from typing import List, Tuple, Union
+
+import torch
 
 import sentencepiece as spm
 from . import sentencepiece_model_pb2 as model
 
-
-class TextTokenizer:
+class SPTokenizer:
     def __init__(self, model_path):
         self.proto = model.ModelProto()
         with open(model_path, 'rb') as fin:
@@ -59,3 +52,19 @@ class TextTokenizer:
     
     def __len__(self):
         return self.num_tokens
+
+class TextTokenizer(SPTokenizer):
+    def __init__(self, path='~/ice_text.model', device='cuda', fp16=True):
+        self.configure(path, device, fp16)
+
+        fp = os.path.join(path)
+        super().__init__(fp)
+        
+    def configure(self, path=None, device=None, fp16=None):
+        if path is not None:
+            self.path = os.path.expanduser(path)
+        if device is not None:
+            self.device = device
+        if fp16 is not None:
+            self.fp16 = fp16
+    

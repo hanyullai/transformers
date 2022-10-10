@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2022 shunxing1234 and The HuggingFace Inc. team. All rights reserved.
+# Copyright 2022 THUDM and The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ GLM_130B_PRETRAINED_CONFIG_ARCHIVE_MAP = {
 
 class GLM130BConfig(PretrainedConfig):
     r"""
-    This is the configuration class to store the configuration of a [`~GLMModel`].
+    This is the configuration class to store the configuration of a [`~GLM130BModel`].
     It is used to instantiate an GLM model according to the specified arguments, defining the model
     architecture. Instantiating a configuration with the defaults will yield a similar configuration to that of
     the GLM [shunxing1234/GLM-base-cased](https://huggingface.co/shunxing1234/GLM-base-cased) architecture.

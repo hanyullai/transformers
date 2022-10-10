@@ -28,12 +28,12 @@ from functools import lru_cache
 logger = logging.get_logger(__name__)
 
 VOCAB_FILES_NAMES = {
-    "vocab_file": "spiece.model"
+    "vocab_file": "ice_text.model"
 }
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "THUDM/GLM-130B": "https://huggingface.co/albert-base-v1/resolve/main/spiece.model",
+        "THUDM/GLM-130B": "https://cloud.tsinghua.edu.cn/f/2c73ea6d3e7f4aed82ec/?dl=1",
     }
 }
 
@@ -54,7 +54,6 @@ class GLM130BTokenizer(PreTrainedTokenizer):
     vocab_files_names = VOCAB_FILES_NAMES
     pretrained_vocab_files_map = PRETRAINED_VOCAB_FILES_MAP
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
-    model_input_names = ["input_ids"]
 
     def __init__(
         self,
@@ -92,7 +91,7 @@ class GLM130BTokenizer(PreTrainedTokenizer):
         self.mask_token = mask_token
         self.gMASK_token = gMASK_token
 
-        self.icetokenizer = _IceTokenizer()
+        self.icetokenizer = _IceTokenizer(vocab_file)
 
 
     @property
