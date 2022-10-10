@@ -4,7 +4,6 @@ import torch
 import torch.nn.functional as F
 from typing import Optional, Tuple, Union
 
-from .position_embedding import RotaryEmbedding, apply_rotary_pos_emb_index
 from torch.nn import CrossEntropyLoss
 
 from ...utils import (
@@ -29,6 +28,62 @@ torch._C._jit_override_can_fuse_on_cpu(True)
 torch._C._jit_override_can_fuse_on_gpu(True)
 
 from torch.nn import LayerNorm
+
+class RotaryEmbedding(torch.nn.Module):
+
+    def __init__(self, dim, base=10000, precision=torch.half, learnable=False):
+        super().__init__()
+        inv_freq = 1. / (base ** (torch.arange(0, dim, 2).float() / dim))
+        inv_freq = inv_freq.half()
+        self.learnable = learnable
+        if learnable:
+            self.inv_freq = torch.nn.Parameter(inv_freq)
+            self.max_seq_len_cached = None
+        else:
+            self.register_buffer('inv_freq', inv_freq)
+            self.max_seq_len_cached = None
+            self.cos_cached = None
+            self.sin_cached = None
+        self.precision = precision
+
+    def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
+        pass
+
+
+    def forward(self, x, seq_dim=1, seq_len=None):
+        if seq_len is None:
+            seq_len = x.shape[seq_dim]
+        if self.max_seq_len_cached is None or (seq_len > self.max_seq_len_cached):
+            self.max_seq_len_cached = None if self.learnable else seq_len
+            t = torch.arange(seq_len, device=x.device, dtype=self.inv_freq.dtype)
+            freqs = torch.einsum('i,j->ij', t, self.inv_freq)
+            # Different from paper, but it uses a different permutation in order to obtain the same calculation
+            emb = torch.cat((freqs, freqs), dim=-1).to(x.device)
+            if self.precision == torch.bfloat16:
+                emb = emb.float()
+
+            # [sx, 1 (b * np), hn]
+            cos_cached = emb.cos()[:, None, :]
+            sin_cached = emb.sin()[:, None, :]
+            if self.precision == torch.bfloat16:
+                cos_cached = cos_cached.bfloat16()
+                sin_cached = sin_cached.bfloat16()
+            if self.learnable:
+                return cos_cached, sin_cached
+            self.cos_cached, self.sin_cached = cos_cached, sin_cached
+        return self.cos_cached[:seq_len, ...], self.sin_cached[:seq_len, ...]
+
+def rotate_half(x):
+    x1, x2 = x[..., :x.shape[-1] // 2], x[..., x.shape[-1] // 2:]
+    return torch.cat((-x2, x1), dim=x1.ndim - 1)  # dim=-1 triggers a bug in earlier torch versions
+
+@torch.jit.script
+def apply_rotary_pos_emb_index(q, k, cos, sin, position_id):
+    # position_id: [sq, b], q, k: [sq, b, np, hn], cos: [sq, 1, hn] -> [sq, b, 1, hn]
+    cos, sin = F.embedding(position_id, cos.squeeze(1)).unsqueeze(2), \
+               F.embedding(position_id, sin.squeeze(1)).unsqueeze(2)
+    q, k = (q * cos) + (rotate_half(q) * sin), (k * cos) + (rotate_half(k) * sin)
+    return q, k
 
 def attention_fn(
         self,
@@ -740,13 +795,13 @@ class GLM130BForConditionalGeneration(GLM130BPreTrainedModel):
     @torch.no_grad()
     def generate(
         self,
-        **model_kwargs,
+        **kwargs,
     ):
         MASK, gMASK = 150000, 150001
         bos, eos = 150004, 150005
 
         while True:
-            output_ids = super().generate(**model_kwargs)
+            output_ids = super().generate(**kwargs)
             
             output_seq = output_ids[0].tolist()
             mask_token = MASK if MASK in output_seq else gMASK
@@ -757,9 +812,9 @@ class GLM130BForConditionalGeneration(GLM130BPreTrainedModel):
             return_seq = output_seq[:mask_position] + output_seq[bos_position+1:eos_position] + output_seq[mask_position+1:bos_position]
 
             if mask_token in return_seq: 
-                model_kwargs['input_ids'] = torch.LongTensor([return_seq + [bos]]).to(model_kwargs['input_ids'].device)
+                kwargs['input_ids'] = torch.tensor([return_seq + [bos]], dtype=torch.long, device=kwargs['input_ids'].device)
             else:
                 break
             
-        return torch.LongTensor([return_seq]).to(model_kwargs['input_ids'].device)
+        return torch.tensor([return_seq], dtype=torch.long, device=kwargs['input_ids'].device)
 
