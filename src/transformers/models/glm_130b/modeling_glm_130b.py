@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from typing import Optional, Tuple, Union
 
 from torch.nn import CrossEntropyLoss
+from torch.nn.utils import skip_init
 
 from ...utils import (
     requires_backends,
@@ -240,14 +241,16 @@ class SelfAttention(torch.nn.Module):
 
 
         # Strided linear layer.
-        self.query_key_value = torch.nn.Linear(
+        self.query_key_value = skip_init(
+            torch.nn.Linear,
             hidden_size,
             3 * self.inner_hidden_size,
             bias=bias,
             dtype=params_dtype,
         )
 
-        self.dense = torch.nn.Linear(
+        self.dense = skip_init(
+            torch.nn.Linear,
             self.inner_hidden_size,
             hidden_size,
             bias=bias,
@@ -358,14 +361,16 @@ class GLU(torch.nn.Module):
         if inner_hidden_size is None:
             inner_hidden_size = 4 * hidden_size
         self.inner_hidden_size = inner_hidden_size
-        self.dense_h_to_4h = torch.nn.Linear(
+        self.dense_h_to_4h = skip_init(
+            torch.nn.Linear,
             self.hidden_size,
             2 * self.inner_hidden_size,
             bias=bias,
             dtype=params_dtype,
         )
         # Project back to h.
-        self.dense_4h_to_h = torch.nn.Linear(
+        self.dense_4h_to_h = skip_init(
+            torch.nn.Linear,
             self.inner_hidden_size,
             self.hidden_size,
             bias=bias,
@@ -524,7 +529,8 @@ class GLM130BModel(GLM130BPreTrainedModel):
         self.inner_hidden_size = config.inner_hidden_size
         self.hidden_size_per_attention_head = self.hidden_size // self.num_attention_heads
 
-        self.word_embeddings = torch.nn.Embedding(
+        self.word_embeddings = skip_init(
+            torch.nn.Embedding,
             num_embeddings=self.vocab_size, embedding_dim=self.hidden_size, 
             dtype=self.params_dtype
         )
@@ -660,7 +666,13 @@ class GLM130BForConditionalGeneration(GLM130BPreTrainedModel):
 
         self.transformer = GLM130BModel(config)
 
-        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False, dtype=torch.half)
+        self.lm_head = skip_init(
+            nn.Linear,
+            config.hidden_size, 
+            config.vocab_size, 
+            bias=False,
+            dtype=torch.half
+        )
 
     def get_output_embeddings(self):
         return self.lm_head
@@ -668,22 +680,21 @@ class GLM130BForConditionalGeneration(GLM130BPreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.lm_head = new_embeddings
 
-    def get_masks_and_position_ids(self, seq, mask_position, context_length, gmask=False):
-        tokens = seq.unsqueeze(0)
+    def get_masks_and_position_ids(self, mask_position, context_length, device, gmask=False):
 
-        attention_mask = torch.ones((1, len(seq), len(seq)), device=tokens.device)
+        attention_mask = torch.ones((1, context_length, context_length), device=device)
         attention_mask.tril_()
         attention_mask[..., :context_length - 1] = 1
         attention_mask.unsqueeze_(1)
         attention_mask = (attention_mask < 0.5).bool()
 
-        position_ids = torch.arange(len(seq), dtype=torch.long, device=tokens.device)
+        position_ids = torch.arange(context_length, dtype=torch.long, device=device)
         if not gmask:
             position_ids[context_length - 1:] = mask_position
 
         position_ids = position_ids.unsqueeze(0)
 
-        return tokens, attention_mask, position_ids
+        return attention_mask, position_ids
 
     def prepare_inputs_for_generation(
         self, 
@@ -714,20 +725,16 @@ class GLM130BForConditionalGeneration(GLM130BPreTrainedModel):
             }
 
         else:
-            input_seq = torch.cuda.LongTensor(
-                seq,
-                device=input_ids.device,
-            )
 
-            tokens, attention_mask, position_ids = self.get_masks_and_position_ids(
-                input_seq,
+            attention_mask, position_ids = self.get_masks_and_position_ids(
                 mask_position=mask_position,
-                context_length=len(input_seq),
+                context_length=len(seq),
+                device=input_ids.device,
                 gmask=use_gmask
             )
 
             return {
-                "input_ids": tokens,
+                "input_ids": input_ids,
                 "past_key_values": past,
                 "position_ids": position_ids, 
                 "attention_mask": attention_mask
@@ -792,6 +799,25 @@ class GLM130BForConditionalGeneration(GLM130BPreTrainedModel):
             attentions=transformer_outputs.attentions,
         )
 
+    @staticmethod
+    def _reorder_cache(
+        past: Tuple[Tuple[torch.Tensor, torch.Tensor], ...], beam_idx: torch.LongTensor
+    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], ...]:
+        """
+        This function is used to re-order the `past_key_values` cache if [`~PreTrainedModel.beam_search`] or
+        [`~PreTrainedModel.beam_sample`] is called. This is required to match `past_key_values` with the correct
+        beam_idx at every generation step.
+
+        Output shares the same memory storage as `past`.
+        """
+        return tuple(
+            (
+                layer_past[0].index_select(1, beam_idx.to(layer_past[0].device)),
+                layer_past[1].index_select(1, beam_idx.to(layer_past[1].device)),
+            )
+            for layer_past in past
+        )
+
     @torch.no_grad()
     def generate(
         self,
@@ -807,8 +833,11 @@ class GLM130BForConditionalGeneration(GLM130BPreTrainedModel):
             mask_token = MASK if MASK in output_seq else gMASK
             mask_position = output_seq.index(mask_token)
             bos_position = output_seq.index(bos)
-            eos_position = output_seq.index(eos)
-
+            if eos in output_seq:
+                eos_position = output_seq.index(eos)
+            else:
+                eos_position = len(output_seq)
+                
             return_seq = output_seq[:mask_position] + output_seq[bos_position+1:eos_position] + output_seq[mask_position+1:bos_position]
 
             if mask_token in return_seq: 
