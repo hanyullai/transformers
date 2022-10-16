@@ -563,6 +563,25 @@ class GLM130BModel(GLM130BPreTrainedModel):
     def set_input_embeddings(self, new_embeddings: torch.Tensor):
         self.word_embeddings = new_embeddings
 
+    def get_masks(self, context_length, device):
+
+        attention_mask = torch.ones((1, context_length, context_length), device=device)
+        attention_mask.tril_()
+        attention_mask[..., :context_length - 1] = 1
+        attention_mask.unsqueeze_(1)
+        attention_mask = (attention_mask < 0.5).bool()
+
+        return attention_mask
+
+    def get_position_ids(self, mask_position, context_length, device, gmask=False):
+
+        position_ids = torch.arange(context_length, dtype=torch.long, device=device)
+        if not gmask:
+            position_ids[context_length - 1:] = mask_position
+
+        position_ids = position_ids.unsqueeze(0)
+
+        return position_ids
 
     def forward(
         self,
@@ -595,6 +614,27 @@ class GLM130BModel(GLM130BPreTrainedModel):
 
         if past_key_values is None:
             past_key_values = tuple([None] * len(self.layers))
+
+            MASK, gMASK = 150000, 150001
+            mask_token = MASK if MASK in input_ids else gMASK
+            use_gmask = False if MASK in input_ids else gMASK
+            seq = input_ids[0].tolist()
+            
+            mask_position = seq.index(mask_token)
+
+            if attention_mask is None:
+                attention_mask = self.get_masks(
+                    context_length=len(seq),
+                    device=input_ids.device
+                )
+
+            if position_ids is None:
+                position_ids = self.get_position_ids(
+                    mask_position=mask_position,
+                    context_length=len(seq),
+                    device=input_ids.device,
+                    gmask=use_gmask
+                )
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)

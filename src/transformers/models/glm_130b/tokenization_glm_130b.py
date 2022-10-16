@@ -117,8 +117,6 @@ class GLM130BTokenizer(PreTrainedTokenizer):
     def _tokenize(self, text):
         # assert False
         text = self.preprocess_text(text)
-        # add MASK
-        generation_mask = "[MASK]" if "[MASK]" in text else "[gMASK]"
 
         mask_pattern = r"\[g?MASK\]"
         text_list = re.split(mask_pattern, text)
